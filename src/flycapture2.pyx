@@ -48,6 +48,65 @@ def get_library_version():
     return {"major": v.major, "minor": v.minor,
             "type": v.type, "build": v.build}
 
+cdef class VideoWriter:
+    cdef fc2AVIContext avi
+
+    def __cinit__(self):
+        cdef fc2Error r
+        with nogil:
+            r = fc2CreateAVI(&self.avi)
+        raise_error(r)
+
+    def __dealloc__(self):
+        cdef fc2Error r
+        with nogil:
+            r = fc2DestroyAVI(self.avi)
+        raise_error(r)
+
+    def openAVI(self, char *fileName, unsigned int frameRate):
+        cdef fc2Error r
+        cdef fc2AVIOption AVIOption
+        AVIOption.frameRate = frameRate
+        with nogil:
+            # r = fc2AVIOpen(self.avi, &fileName, &AVIOption)   
+            r = fc2AVIOpen(self.avi, fileName, &AVIOption)   
+        raise_error(r)
+    
+    def openH264(self, char *fileName, unsigned int frameRate):
+        cdef fc2Error r
+        cdef fc2H264Option H264Option
+        H264Option.frameRate = frameRate
+        H264Option.bitrate = 1000000
+        H264Option.width = 1280
+        H264Option.height = 960
+        with nogil:
+            r = fc2H264Open(self.avi, fileName, &H264Option)   
+        raise_error(r)
+    
+    def openMJPG(self, char *fileName, unsigned int frameRate):
+        cdef fc2Error r
+        cdef fc2MJPGOption MJPGOption
+        MJPGOption.frameRate = frameRate
+        MJPGOption.quality = 75
+        with nogil:
+            r = fc2MJPGOpen(self.avi, fileName, &MJPGOption)   
+        raise_error(r)
+    
+    def close(self):
+        cdef fc2Error r
+        with nogil:
+            r = fc2AVIClose(self.avi)
+        raise_error(r)
+
+    def append(self, Image img):
+    # fc2Error fc2AVIAppend(fc2AVIContext AVIContext, fc2Image *pImage) nogil
+        cdef fc2Error r
+        with nogil:
+            r = fc2AVIAppend(self.avi, &img.img)
+        raise_error(r)
+
+
+
 cdef class Context:
     cdef fc2Context ctx
 
@@ -256,8 +315,7 @@ cdef class Context:
         cdef fc2Error r
         with nogil:
             r = fc2FireSoftwareTrigger(self.ctx)
-        raise_error(r)
-    
+        raise_error(r)    
         
 
 

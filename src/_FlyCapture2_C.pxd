@@ -258,6 +258,10 @@ cdef extern from "FlyCapture2_C.h":
 
     fc2Error fc2AVIOpen(fc2AVIContext AVIContext, char *pFileName, fc2AVIOption *pOption) nogil
 
+    fc2Error fc2H264Open(fc2AVIContext AVIContext, char *pFileName, fc2H264Option *pOption) nogil
+    
+    fc2Error fc2MJPGOpen(fc2AVIContext AVIContext, char *pFileName, fc2MJPGOption *pOption) nogil
+
     fc2Error fc2AVIAppend(fc2AVIContext AVIContext, fc2Image *pImage) nogil
 
     fc2Error fc2AVIClose(fc2AVIContext AVIContext) nogil
