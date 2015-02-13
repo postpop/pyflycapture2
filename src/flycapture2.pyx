@@ -360,3 +360,35 @@ cdef class Image:
         r.base = <PyObject *>self
         Py_INCREF(self)
         return r
+        
+        # Stamp fc2GetImageTimeStamp(fc2Image *pImage) nogil
+        def getTimeStamp(self):
+            cdef fc2TimeStamp t
+            with nogil:
+                t = fc2FireSoftwareTrigger(&self.img)
+            return t    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
