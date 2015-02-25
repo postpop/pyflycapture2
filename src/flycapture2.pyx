@@ -24,6 +24,8 @@ cimport numpy as np
 
 from cpython cimport PyObject, Py_INCREF
 
+ctypedef np.uint8_t DTYPE_t
+
 cdef extern from "numpy/arrayobject.h":
     object PyArray_NewFromDescr(object subtype, np.dtype descr,
                                 int nd, np.npy_intp* dims,
@@ -316,12 +318,47 @@ cdef class Context:
         with nogil:
             r = fc2FireSoftwareTrigger(self.ctx)
         raise_error(r)    
-        
 
+    # fc2Error fc2WriteRegister(fc2Context context, unsigned int address, unsigned int value) nogil
+    def set_register(self, unsigned int address, unsigned int value):
+        cdef fc2Error r
+        with nogil:
+            r = fc2WriteRegister(self.ctx, address, value)
+        raise_error(r)
+
+    # fc2Error fc2ReadRegister(fc2Context context, unsigned int address, unsigned int *pValue) nogil
+    def get_register(self, unsigned int address):
+        cdef fc2Error r
+        cdef unsigned int value
+        with nogil:
+            r = fc2ReadRegister(self.ctx, address, &value)
+        raise_error(r)
+        return value
+   
+    # fc2Error fc2GetEmbeddedImageInfo(fc2Context context, fc2EmbeddedImageInfo *pInfo) nogil
+    def get_embedded_image_info(self):
+        cdef fc2Error r
+        cdef fc2EmbeddedImageInfo pInfo
+        with nogil:
+            r = fc2GetEmbeddedImageInfo(self.ctx, &pInfo)
+        return {"timeStamp": pInfo.timestamp,
+                "brightness": pInfo.brightness}
+
+    
+    # # fc2Error fc2SetEmbeddedImageInfo(fc2Context context, fc2EmbeddedImageInfo *pInfo) nogil
+    
+    # # fc2Error fc2GetDefaultOutputFormat(fc2PixelFormat *pFormat) nogil
+    
+    # # fc2Error fc2SetDefaultOutputFormat(fc2PixelFormat format) nogil
+    def set_default_output_format(self, fc2PixelFormat pf):
+        cdef fc2Error r
+        with nogil:
+            r = fc2SetDefaultOutputFormat(pf)
+        raise_error(r)
 
 cdef class Image:
     cdef fc2Image img
-
+    
     def __cinit__(self):
         cdef fc2Error r
         with nogil:
@@ -339,19 +376,28 @@ cdef class Image:
         cdef np.npy_intp shape[2]
         cdef np.npy_intp stride[2]
         cdef np.dtype dtype
+
+        shape[0] = self.img.rows
+        shape[1] = self.img.cols
+        stride[0] = self.img.stride
+        
         if self.img.format == PIXEL_FORMAT_MONO8:
             dtype = np.dtype("uint8")
             stride[1] = 1
         elif self.img.format == PIXEL_FORMAT_MONO16:
             dtype = np.dtype("uint16")
             stride[1] = 2
+        elif self.img.format == PIXEL_FORMAT_RGB:
+            dtype = np.dtype("uint8")
+            stride[1] = 1#self.img.stride/self.img.cols
+            shape[1] = self.img.cols*3
+        elif self.img.format == PIXEL_FORMAT_422YUV8:
+            dtype = np.dtype("uint8")
+            stride[1] = 1            
         else:
             dtype = np.dtype("uint8")
             stride[1] = self.img.stride/self.img.cols
         Py_INCREF(dtype)
-        shape[0] = self.img.rows
-        shape[1] = self.img.cols
-        stride[0] = self.img.stride
         #assert stride[0] == stride[1]*shape[1]
         #assert shape[0]*shape[1]*stride[1] == self.img.dataSize
         r = PyArray_NewFromDescr(np.ndarray, dtype,
@@ -360,32 +406,31 @@ cdef class Image:
         r.base = <PyObject *>self
         Py_INCREF(self)
         return r
-        
-        # Stamp fc2GetImageTimeStamp(fc2Image *pImage) nogil
-        def getTimeStamp(self):
-            cdef fc2TimeStamp t
-            with nogil:
-                t = fc2FireSoftwareTrigger(&self.img)
-            return t    
-    
 
+    def getInfo(self):
+         return {"stride": self.img.stride,
+                "cols": self.img.cols,
+                "rows": self.img.rows,
+                "format": self.img.format,
+                "dataSize": self.img.dataSize,
+                "pData": self.img.pData}
 
+    def convertImage(self, fc2PixelFormat pf, Image img):
+        cdef fc2Error r
+        with nogil:
+            # fc2Error fc2ConvertImageTo(fc2PixelFormat format, fc2Image *pImageIn, fc2Image *pImageOut) nogil
+            r = fc2ConvertImageTo(pf, &self.img, &img.img)                                                
+        raise_error(r)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    def getTimeStamp(self):
+        cdef fc2TimeStamp ts
+        with nogil:
+            ts = fc2GetImageTimeStamp(&self.img)
+        return {"seconds": ts.seconds,
+                "cycleCount": ts.cycleCount,
+                "cycleSeconds": ts.cycleSeconds,
+                "cycleOffset": ts.cycleOffset,
+                "microSeconds": ts.microSeconds}
 
 
 
