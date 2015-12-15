@@ -148,6 +148,24 @@ cdef class Context:
         raise_error(r)
         return g.value[0], g.value[1], g.value[2], g.value[3]
 
+    def get_camera_from_serialnumber(self, unsigned int serialNumnber):
+        # fc2Error fc2GetCameraFromSerialNumber(fc2Context context, unsigned int serialNumber, fc2PGRGuid *pGuid) nogil
+        cdef fc2PGRGuid g
+        cdef fc2Error r
+        with nogil:
+            r = fc2GetCameraFromSerialNumber(self.ctx, serialNumber, &g)
+        raise_error(r)
+        return g.value[0], g.value[1], g.value[2], g.value[3]
+
+    def get_camera_serialnumber_from_indec(self, unsigned int index):
+        # fc2Error fc2GetCameraSerialNumberFromIndex(fc2Context context, unsigned int index, unsigned int *pSerialNumber) nogil
+        cdef unsigned int serial_number
+        cdef fc2Error r
+        with nogil:
+            r = fc2GetCameraSerialNumberFromIndex(self.ctx, index, &serial_number)
+        raise_error(r)
+        return serial_number
+
     def get_camera_info(self):
         cdef fc2CameraInfo i
         cdef fc2Error r
@@ -339,8 +357,15 @@ cdef class Context:
     def get_embedded_image_info(self):
         cdef fc2Error r
         cdef fc2EmbeddedImageInfo pInfo
+        
+        # cdef fc2EmbeddedImageInfoProperty pInfoProperty
+        print('test')
         with nogil:
             r = fc2GetEmbeddedImageInfo(self.ctx, &pInfo)
+            # pInfo.timestamp( &pInfoProperty)
+            # r = fc2GetEmbeddedImageTimeStamp(self.ctx)
+            # r = fc2GetEmbeddedImageInfoProperty(self.ctx, &pInfoProperty)
+        print(pInfo)
         return {"timeStamp": pInfo.timestamp,
                 "brightness": pInfo.brightness}
 
@@ -431,9 +456,4 @@ cdef class Image:
                 "cycleSeconds": ts.cycleSeconds,
                 "cycleOffset": ts.cycleOffset,
                 "microSeconds": ts.microSeconds}
-
-
-
-
-
 

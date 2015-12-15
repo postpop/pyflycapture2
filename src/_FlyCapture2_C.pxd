@@ -211,7 +211,7 @@ cdef extern from "FlyCapture2_C.h":
     fc2Error fc2GetMemoryChannelInfo(fc2Context context, unsigned int *pNumChannels) nogil
 
     fc2Error fc2GetEmbeddedImageInfo(fc2Context context, fc2EmbeddedImageInfo *pInfo) nogil
-
+    
     fc2Error fc2SetEmbeddedImageInfo(fc2Context context, fc2EmbeddedImageInfo *pInfo) nogil
 
     char *fc2GetRegisterString(unsigned int registerVal) nogil
