@@ -148,7 +148,7 @@ cdef class Context:
         raise_error(r)
         return g.value[0], g.value[1], g.value[2], g.value[3]
 
-    def get_camera_from_serialnumber(self, unsigned int serialNumnber):
+    def get_camera_from_serialnumber(self, unsigned int serialNumber):
         # fc2Error fc2GetCameraFromSerialNumber(fc2Context context, unsigned int serialNumber, fc2PGRGuid *pGuid) nogil
         cdef fc2PGRGuid g
         cdef fc2Error r
@@ -157,7 +157,7 @@ cdef class Context:
         raise_error(r)
         return g.value[0], g.value[1], g.value[2], g.value[3]
 
-    def get_camera_serialnumber_from_indec(self, unsigned int index):
+    def get_camera_serialnumber_from_index(self, unsigned int index):
         # fc2Error fc2GetCameraSerialNumberFromIndex(fc2Context context, unsigned int index, unsigned int *pSerialNumber) nogil
         cdef unsigned int serial_number
         cdef fc2Error r
@@ -306,7 +306,28 @@ cdef class Context:
         with nogil:
             r = fc2SetProperty(self.ctx, &p)
         raise_error(r)
+
+    def set_property_from_property(self, prop):
+        cdef fc2Error r
+        cdef fc2Property p
+        p.type = prop['type']
+        p.present = prop['present']
+        p.autoManualMode = prop['auto_manual_mode']
+        p.absControl = prop['abs_control']
+        p.onOff = prop['on_off']
+        p.onePush = prop['one_push']
+        p.absValue = prop['abs_value']
+        p.valueA = prop['value_a']
+        p.valueB = prop['value_b']
+        with nogil:
+            r = fc2SetProperty(self.ctx, &p)
+        raise_error(r)
     
+    def set_property_key_value(self, fc2PropertyType type, key, value):  
+        prop = self.get_property( type )
+        prop[key] = value
+        self.set_property_from_property( prop )
+
     def get_trigger_mode(self):
         cdef fc2Error r
         cdef fc2TriggerMode tm
