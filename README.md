@@ -9,6 +9,4 @@ python setup.py install
 python test_flycapture2.py
 ```
 
-API docs:
-[C API](http://www.ptgrey.com/support/downloads/documents/flycapture/Doxygen/C/html/index.html)
-[C++ API](http://www.ptgrey.com/support/downloads/documents/flycapture/Doxygen/html/index.html)
+API docs: [C API](http://www.ptgrey.com/support/downloads/documents/flycapture/Doxygen/C/html/index.html), [C++ API](http://www.ptgrey.com/support/downloads/documents/flycapture/Doxygen/html/index.html)
