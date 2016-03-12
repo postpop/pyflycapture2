@@ -1,5 +1,5 @@
 Cython/Cwrap based python bindings for the FlyCapture v2 C API from PointGrey.
-The library itself is available from [PointGrey](http://www.ptgrey.com/support/downloads/download.asp) (login required)
+The library itself is available from [PointGrey](https://www.ptgrey.com/support/downloads) (login required)
 
 ```shell
 git clone https://github.com/postpop/pyflycapture2.git
