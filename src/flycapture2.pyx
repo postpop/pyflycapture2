@@ -100,8 +100,8 @@ cdef class VideoWriter:
             r = fc2AVIClose(self.avi)
         raise_error(r)
 
-    def append(self, Image img):
     # fc2Error fc2AVIAppend(fc2AVIContext AVIContext, fc2Image *pImage) nogil
+    def append(self, Image img):
         cdef fc2Error r
         with nogil:
             r = fc2AVIAppend(self.avi, &img.img)
@@ -222,8 +222,7 @@ cdef class Context:
             r = fc2SetVideoModeAndFrameRate(self.ctx, mode, framerate)
         raise_error(r)
 
-    def set_user_buffers(self,
-            np.ndarray[np.uint8_t, ndim=2] buff not None):
+    def set_user_buffers(self, np.ndarray[np.uint8_t, ndim=2] buff not None):
         cdef fc2Error r
         r = fc2SetUserBuffers(self.ctx, <unsigned char *>buff.data,
             buff.shape[1], buff.shape[0])
@@ -306,27 +305,12 @@ cdef class Context:
         with nogil:
             r = fc2SetProperty(self.ctx, &p)
         raise_error(r)
-
-    def set_property_from_property(self, prop):
-        cdef fc2Error r
-        cdef fc2Property p
-        p.type = prop['type']
-        p.present = prop['present']
-        p.autoManualMode = prop['auto_manual_mode']
-        p.absControl = prop['abs_control']
-        p.onOff = prop['on_off']
-        p.onePush = prop['one_push']
-        p.absValue = prop['abs_value']
-        p.valueA = prop['value_a']
-        p.valueB = prop['value_b']
-        with nogil:
-            r = fc2SetProperty(self.ctx, &p)
-        raise_error(r)
     
-    def set_property_key_value(self, fc2PropertyType type, key, value):  
-        prop = self.get_property( type )
-        prop[key] = value
-        self.set_property_from_property( prop )
+    def set_property_abs_value(self, fc2PropertyType prop_type, value):  
+        prop = self.get_property( prop_type )
+        prop['abs_value'] = value
+        self.set_property( **prop )
+        return self.get_property( prop_type )['abs_value']
 
     def get_trigger_mode(self):
         cdef fc2Error r
@@ -390,12 +374,10 @@ cdef class Context:
         return {"timeStamp": pInfo.timestamp,
                 "brightness": pInfo.brightness}
 
-    
     # # fc2Error fc2SetEmbeddedImageInfo(fc2Context context, fc2EmbeddedImageInfo *pInfo) nogil
-    
     # # fc2Error fc2GetDefaultOutputFormat(fc2PixelFormat *pFormat) nogil
     
-    # # fc2Error fc2SetDefaultOutputFormat(fc2PixelFormat format) nogil
+    # fc2Error fc2SetDefaultOutputFormat(fc2PixelFormat format) nogil
     def set_default_output_format(self, fc2PixelFormat pf):
         cdef fc2Error r
         with nogil:
@@ -464,7 +446,6 @@ cdef class Image:
     def convertImage(self, fc2PixelFormat pf, Image img):
         cdef fc2Error r
         with nogil:
-            # fc2Error fc2ConvertImageTo(fc2PixelFormat format, fc2Image *pImageIn, fc2Image *pImageOut) nogil
             r = fc2ConvertImageTo(pf, &self.img, &img.img)                                                
         raise_error(r)
 
