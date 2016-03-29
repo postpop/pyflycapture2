@@ -124,6 +124,9 @@ cdef class Context:
             r = fc2DestroyContext(self.ctx)
         raise_error(r)
 
+    def version(self):
+        return 2.0
+
     def get_num_of_cameras(self):
         cdef unsigned int n
         cdef fc2Error r
@@ -308,6 +311,7 @@ cdef class Context:
     
     def set_property_abs_value(self, fc2PropertyType prop_type, value):  
         prop = self.get_property( prop_type )
+        prop['auto_manual_mode'] = False
         prop['abs_value'] = value
         self.set_property( **prop )
         return self.get_property( prop_type )['abs_value']
