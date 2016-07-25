@@ -30,11 +30,7 @@ m, f = c.get_video_mode_and_frame_rate()
 print m, f
 print c.get_video_mode_and_frame_rate_info(m, f)
 
-p = c.get_property(fc2.SHUTTER)
-p['abs_value'] = 0.4
-c.set_property(**p)
-print c.get_property(fc2.SHUTTER)['abs_value']
-print(c.set_property_abs_value(fc2.SHUTTER, 1))
+print(c.set_property_abs_value(fc2.SHUTTER, 20.0))
 
 c.start_capture()
 im = fc2.Image()
