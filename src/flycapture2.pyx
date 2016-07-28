@@ -310,8 +310,9 @@ cdef class Context:
         raise_error(r)
     
     def set_property_abs_value(self, fc2PropertyType prop_type, value):  
-        prop = self.get_property( prop_type )
-        prop['auto_manual_mode'] = False
+        prop = self.get_property( prop_type )        
+        # prop['auto_manual_mode'] = False
+        prop ={'on_off': True, 'type': prop_type, 'value_a': 3L, 'abs_value': 0.0, 'one_push': False, 'abs_control': True, 'auto_manual_mode': False, 'present': True, 'value_b': 0L}
         prop['abs_value'] = value
         self.set_property( **prop )
         return self.get_property( prop_type )['abs_value']
@@ -363,24 +364,37 @@ cdef class Context:
         return value
    
     # fc2Error fc2GetEmbeddedImageInfo(fc2Context context, fc2EmbeddedImageInfo *pInfo) nogil
+    # see: https://github.com/jordens/pyflycapture2/issues/12
     def get_embedded_image_info(self):
         cdef fc2Error r
         cdef fc2EmbeddedImageInfo pInfo
         
-        # cdef fc2EmbeddedImageInfoProperty pInfoProperty
-        print('test')
         with nogil:
             r = fc2GetEmbeddedImageInfo(self.ctx, &pInfo)
             # pInfo.timestamp( &pInfoProperty)
             # r = fc2GetEmbeddedImageTimeStamp(self.ctx)
             # r = fc2GetEmbeddedImageInfoProperty(self.ctx, &pInfoProperty)
-        print(pInfo)
-        return {"timeStamp": pInfo.timestamp,
-                "brightness": pInfo.brightness}
+        raise_error(r)
+        return {'timestamp': pInfo.timestamp,
+                'gain': pInfo.gain,
+                'shutter': pInfo.shutter,
+                'brightness': pInfo.brightness,
+                'exposure': pInfo.exposure,
+                'white_balance': pInfo.whiteBalance,
+                'frame_counter': pInfo.frameCounter,
+                'strobe_pattern': pInfo.strobePattern,
+                'GPIO_pin_state': pInfo.GPIOPinState,
+                'roi_position': pInfo.ROIPosition}
+        
+    # fc2Error fc2SetEmbeddedImageInfo(fc2Context context, fc2EmbeddedImageInfo *pInfo) nogil
+    def set_embedded_image_info(self, fc2EmbeddedImageInfo pInfo):
+        cdef fc2Error r
+        with nogil:
+            r = fc2SetEmbeddedImageInfo(self.ctx, &pInfo)
+        raise_error(r)     
 
-    # # fc2Error fc2SetEmbeddedImageInfo(fc2Context context, fc2EmbeddedImageInfo *pInfo) nogil
-    # # fc2Error fc2GetDefaultOutputFormat(fc2PixelFormat *pFormat) nogil
-    
+
+    # # fc2Error fc2GetDefaultOutputFormat(fc2PixelFormat *pFormat) nogil    
     # fc2Error fc2SetDefaultOutputFormat(fc2PixelFormat format) nogil
     def set_default_output_format(self, fc2PixelFormat pf):
         cdef fc2Error r
@@ -410,7 +424,8 @@ cdef class Context:
                 "min_packet_size": info.minPacketSize,
                 "max_packet_size": info.maxPacketSize,
                 "percentage": info.percentage,}, supported  
-        
+    
+    
     def get_format7_configuration(self):
         cdef fc2Error r
         cdef fc2Format7ImageSettings s
