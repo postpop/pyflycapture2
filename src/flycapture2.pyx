@@ -18,6 +18,7 @@
 
 from _FlyCapture2_C cimport *
 include "flycapture2_enums.pxi"
+from libc.stdlib cimport malloc, free
 
 import numpy as np
 cimport numpy as np
@@ -65,31 +66,31 @@ cdef class VideoWriter:
             r = fc2DestroyAVI(self.avi)
         raise_error(r)
 
-    def openAVI(self, char *fileName, unsigned int frameRate):
+    def openAVI(self, char *fileName, unsigned int framerate):
         cdef fc2Error r
         cdef fc2AVIOption AVIOption
-        AVIOption.frameRate = frameRate
+        AVIOption.frameRate = framerate
         with nogil:
             # r = fc2AVIOpen(self.avi, &fileName, &AVIOption)   
             r = fc2AVIOpen(self.avi, fileName, &AVIOption)   
         raise_error(r)
     
-    def openH264(self, char *fileName, unsigned int frameRate):
+    def openH264(self, char *fileName, unsigned int width, unsigned int height, unsigned int framerate, unsigned int bitrate=1000000):
         cdef fc2Error r
         cdef fc2H264Option H264Option
-        H264Option.frameRate = frameRate
-        H264Option.bitrate = 1000000
-        H264Option.width = 1280
-        H264Option.height = 960
+        H264Option.frameRate = framerate
+        H264Option.bitrate = bitrate
+        H264Option.width = width
+        H264Option.height = height
         with nogil:
             r = fc2H264Open(self.avi, fileName, &H264Option)   
         raise_error(r)
     
-    def openMJPG(self, char *fileName, unsigned int frameRate):
+    def openMJPG(self, char *fileName, unsigned int framerate, unsigned int quality=75):
         cdef fc2Error r
         cdef fc2MJPGOption MJPGOption
-        MJPGOption.frameRate = frameRate
-        MJPGOption.quality = 75
+        MJPGOption.frameRate = framerate
+        MJPGOption.quality = quality
         with nogil:
             r = fc2MJPGOpen(self.avi, fileName, &MJPGOption)   
         raise_error(r)
@@ -100,13 +101,11 @@ cdef class VideoWriter:
             r = fc2AVIClose(self.avi)
         raise_error(r)
 
-    # fc2Error fc2AVIAppend(fc2AVIContext AVIContext, fc2Image *pImage) nogil
     def append(self, Image img):
         cdef fc2Error r
         with nogil:
             r = fc2AVIAppend(self.avi, &img.img)
         raise_error(r)
-
 
 
 cdef class Context:
@@ -317,6 +316,7 @@ cdef class Context:
         self.set_property( **prop )
         return self.get_property( prop_type )['abs_value']
 
+
     def get_trigger_mode(self):
         cdef fc2Error r
         cdef fc2TriggerMode tm
@@ -328,8 +328,8 @@ cdef class Context:
                 "mode": tm.mode,
                 "parameter": tm.parameter }
 
-    def set_trigger_mode(self, on_off, polarity, source,
-            mode, parameter):
+
+    def set_trigger_mode(self, on_off, polarity, source, mode, parameter):
         cdef fc2Error r
         cdef fc2TriggerMode tm
         tm.onOff = on_off
@@ -340,12 +340,14 @@ cdef class Context:
         with nogil:
             r = fc2SetTriggerMode(self.ctx, &tm)
         raise_error(r)
+
     
     def fire_software_trigger(self):
         cdef fc2Error r
         with nogil:
             r = fc2FireSoftwareTrigger(self.ctx)
-        raise_error(r)    
+        raise_error(r)
+        
 
     # fc2Error fc2WriteRegister(fc2Context context, unsigned int address, unsigned int value) nogil
     def set_register(self, unsigned int address, unsigned int value):
@@ -394,8 +396,6 @@ cdef class Context:
         raise_error(r)     
 
 
-    # # fc2Error fc2GetDefaultOutputFormat(fc2PixelFormat *pFormat) nogil    
-    # fc2Error fc2SetDefaultOutputFormat(fc2PixelFormat format) nogil
     def set_default_output_format(self, fc2PixelFormat pf):
         cdef fc2Error r
         with nogil:
@@ -403,11 +403,10 @@ cdef class Context:
         raise_error(r)
 
 
-    def get_format7_info(self, mode):
+    def get_format7_info(self):
         cdef fc2Error r
         cdef fc2Format7Info info
         cdef BOOL supported
-        info.mode = mode
         with nogil:
             r = fc2GetFormat7Info(self.ctx, &info, &supported)
         raise_error(r)
@@ -440,7 +439,8 @@ cdef class Context:
                 "width": s.width,
                 "height": s.height,
                 "pixel_format": s.pixelFormat,}
-                
+
+
     def set_format7_configuration(self, mode, offset_x, offset_y, width, height, pixel_format):
         cdef fc2Error r
         cdef fc2Format7ImageSettings s
@@ -455,14 +455,69 @@ cdef class Context:
             r = fc2SetFormat7Configuration(self.ctx, &s, f)
         raise_error(r)
 
+
+    def get_configuration(self):
+        cdef fc2Error r
+        cdef fc2Config config
+        with nogil:
+            r = fc2GetConfiguration(self.ctx, &config)
+        raise_error(r)        
+        return {
+            "num_buffers": config.numBuffers,
+            "num_image_notifications": config.numImageNotifications,
+            "min_num_image_notifications": config.minNumImageNotifications,
+            "grab_timeout": config.grabTimeout,
+            "grab_mode": config.grabMode,
+            # "high_performance_retrieve_buffer": config.highPerformanceRetrieveBuffer,
+            "isoch_bus_speed": config.isochBusSpeed,
+            "async_bus_speed": config.asyncBusSpeed,
+            "bandwidth_allocation": config.bandwidthAllocation,
+            "register_timeout_retries": config.registerTimeoutRetries,
+            "register_timeout": config.registerTimeout,
+        }
+
+    def set_configuration(self, num_buffers,
+                          num_image_notifications, min_num_image_notifications,
+                          grab_timeout, grab_mode, #high_performance_retrieve_buffer,
+                          isoch_bus_speed, async_bus_speed,
+                          bandwidth_allocation,
+                          register_timeout_retries, register_timeout):
+        cdef fc2Error r
+        cdef fc2Config config
+        config.numBuffers = num_buffers
+        config.numImageNotifications = num_image_notifications
+        config.minNumImageNotifications = min_num_image_notifications
+        config.grabTimeout = grab_timeout
+        config.grabMode = grab_mode
+        # config.highPerformanceRetrieveBuffer = high_performance_retrieve_buffer
+        config.isochBusSpeed = isoch_bus_speed
+        config.asyncBusSpeed = async_bus_speed
+        config.bandwidthAllocation = bandwidth_allocation
+        config.registerTimeoutRetries = register_timeout_retries
+        config.registerTimeout = register_timeout
+        with nogil:
+            r = fc2SetConfiguration(self.ctx, &config)
+        raise_error(r)
+
+    def set_cfg_value(self, key, value):
+        cfg = self.get_configuration()
+        cfg[key] = value
+        self.set_configuration(**cfg)
+
 cdef class Image:
     cdef fc2Image img
-    
+    cdef object fmt
+
+
     def __cinit__(self):
         cdef fc2Error r
         with nogil:
             r = fc2CreateImage(&self.img)
         raise_error(r)
+
+    def __init__(self):
+        self.fmt = None
+
 
     def __dealloc__(self):
         cdef fc2Error r
@@ -470,57 +525,139 @@ cdef class Image:
             r = fc2DestroyImage(&self.img)
         raise_error(r)
 
+    # NEW VERSION - TEST
     def __array__(self):
         cdef np.ndarray r
-        cdef np.npy_intp shape[2]
-        cdef np.npy_intp stride[2]
+        cdef np.npy_intp shape[3]
+        cdef np.npy_intp stride[3]
         cdef np.dtype dtype
-
-        shape[0] = self.img.rows
-        shape[1] = self.img.cols
-        stride[0] = self.img.stride
-        
-        if self.img.format == PIXEL_FORMAT_MONO8:
+        fmt = self.fmt or self.img.format
+        ndim = 2
+        if fmt == PIXEL_FORMAT_MONO8 or fmt == PIXEL_FORMAT_RAW8:
             dtype = np.dtype("uint8")
             stride[1] = 1
-        elif self.img.format == PIXEL_FORMAT_MONO16:
+        elif fmt == PIXEL_FORMAT_MONO16 or fmt == PIXEL_FORMAT_RAW16:
             dtype = np.dtype("uint16")
             stride[1] = 2
-        elif self.img.format == PIXEL_FORMAT_RGB:
+        elif fmt == PIXEL_FORMAT_RGB8 or fmt == PIXEL_FORMAT_444YUV8:
             dtype = np.dtype("uint8")
-            stride[1] = 1#self.img.stride/self.img.cols
-            shape[1] = self.img.cols*3
-        elif self.img.format == PIXEL_FORMAT_422YUV8:
+            ndim = 3
+            stride[1] = 3
+            stride[2] = 1
+            shape[2] = 3
+        elif fmt == PIXEL_FORMAT_422YUV8:
             dtype = np.dtype("uint8")
-            stride[1] = 1            
+            ndim = 3
+            stride[1] = 2
+            stride[2] = 1
+            shape[2] = 2
         else:
             dtype = np.dtype("uint8")
             stride[1] = self.img.stride/self.img.cols
         Py_INCREF(dtype)
+        shape[0] = self.img.rows
+        shape[1] = self.img.cols
+        stride[0] = self.img.stride
         #assert stride[0] == stride[1]*shape[1]
         #assert shape[0]*shape[1]*stride[1] == self.img.dataSize
         r = PyArray_NewFromDescr(np.ndarray, dtype,
-                2, shape, stride,
+                ndim, shape, stride,
                 self.img.pData, np.NPY_DEFAULT, None)
         r.base = <PyObject *>self
         Py_INCREF(self)
         return r
 
-    def getInfo(self):
+    # # OLD VERSION - WORKS BUT HAS FLAWS
+    # def __array__(self):
+    #     cdef np.ndarray r
+    #     cdef np.npy_intp* shape = NULL
+    #     cdef np.npy_intp* stride = NULL
+    #     cdef np.dtype dtype
+    #     # cdef np.dtype dtype = 
+    #     nd = 2
+    #     fmt = self.img.format
+    #     if fmt == PIXEL_FORMAT_MONO8:
+    #         dtype = np.dtype("uint8")
+    #         shape = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
+    #         stride = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
+    #         stride[1] = 1
+    #     elif fmt == PIXEL_FORMAT_MONO16:
+    #         dtype = np.dtype("uint16")
+    #         shape = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
+    #         stride = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
+    #         stride[1] = 2 # since 16=2*8bits?
+    #     elif fmt == PIXEL_FORMAT_RGB:
+    #         dtype = np.dtype("uint8")
+    #         shape = <np.npy_intp*>malloc(3*sizeof(np.npy_intp))
+    #         stride = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
+    #         nd = 3 # COLOR
+    #         shape[2] = 3 # N color channels
+    #         stride = NULL
+    #     elif fmt == PIXEL_FORMAT_422YUV8:
+    #         dtype = np.dtype("uint8")
+    #         shape = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
+    #         stride = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
+    #         stride[1] = 1            
+    #     else:
+    #         dtype = np.dtype("uint8")
+    #         shape = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
+    #         stride = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
+    #         stride[1] = self.img.stride/self.img.cols
+    #     Py_INCREF(dtype)
+    #     shape[0] = self.img.rows
+    #     shape[1] = self.img.cols
+    #     if stride != NULL:
+    #         stride[0] = self.img.stride
+    #     #assert stride[0] == stride[1]*shape[1]
+    #     #assert shape[0]*shape[1]*stride[1] == self.img.dataSize        
+    #     r = PyArray_NewFromDescr(np.ndarray, dtype,
+    #             nd, shape, stride,
+    #             self.img.pData, np.NPY_DEFAULT, None)
+    #     r.base = <PyObject *>self
+    #     Py_INCREF(self)
+    #     if shape != NULL:
+    #         free(shape)
+    #     if stride != NULL:
+    #         free(stride)
+    #     return r
+
+    # fc2Error fc2DetermineBitsPerPixel(fc2PixelFormat format, unsigned int *pBitsPerPixel) nogil   
+    # bitsPerPixel for the provided PixcelFormat
+    def get_bits_per_pixel(self):
+        cdef fc2Error r
+        cdef fc2PixelFormat pixel_format
+        cdef unsigned int bitsPerPixel
+
+        pixel_format = self.img.format
+
+        with nogil:
+            r = fc2DetermineBitsPerPixel(pixel_format, &bitsPerPixel)
+        raise_error(r)
+        return bitsPerPixel
+
+
+    def get_info(self):
          return {"stride": self.img.stride,
                 "cols": self.img.cols,
                 "rows": self.img.rows,
                 "format": self.img.format,
+                "bitsPerPixel": self.get_bits_per_pixel(),
                 "dataSize": self.img.dataSize,
                 "pData": self.img.pData}
 
-    def convertImage(self, fc2PixelFormat pf, Image img):
+  
+    def convert(self, pf, Image dst=None):
         cdef fc2Error r
+        cdef fc2PixelFormat _pf
+        _pf = pf
+        if dst is None:
+            dst = Image()
         with nogil:
-            r = fc2ConvertImageTo(pf, &self.img, &img.img)                                                
+            r = fc2ConvertImageTo(_pf, &self.img, &dst.img)
         raise_error(r)
+        return dst
 
-    def getTimeStamp(self):
+    def timestamp(self):
         cdef fc2TimeStamp ts
         with nogil:
             ts = fc2GetImageTimeStamp(&self.img)
@@ -529,4 +666,12 @@ cdef class Image:
                 "cycleSeconds": ts.cycleSeconds,
                 "cycleOffset": ts.cycleOffset,
                 "microSeconds": ts.microSeconds}
+
+
+    def set_format(self, fmt):
+        self.fmt = fmt
+
+
+    def get_format(self):
+        return self.fmt or self.img.format
 
