@@ -1,3 +1,4 @@
+# cython: language_level=3
 # -*- coding: utf8 -*-
 #
 #   pyflycapture2 - python bindings for libflycapture2_c
@@ -50,62 +51,6 @@ def get_library_version():
     raise_error(r)
     return {"major": v.major, "minor": v.minor,
             "type": v.type, "build": v.build}
-
-cdef class VideoWriter:
-    cdef fc2AVIContext avi
-
-    def __cinit__(self):
-        cdef fc2Error r
-        with nogil:
-            r = fc2CreateAVI(&self.avi)
-        raise_error(r)
-
-    def __dealloc__(self):
-        cdef fc2Error r
-        with nogil:
-            r = fc2DestroyAVI(self.avi)
-        raise_error(r)
-
-    def openAVI(self, char *fileName, unsigned int framerate):
-        cdef fc2Error r
-        cdef fc2AVIOption AVIOption
-        AVIOption.frameRate = framerate
-        with nogil:
-            # r = fc2AVIOpen(self.avi, &fileName, &AVIOption)   
-            r = fc2AVIOpen(self.avi, fileName, &AVIOption)   
-        raise_error(r)
-    
-    def openH264(self, char *fileName, unsigned int width, unsigned int height, unsigned int framerate, unsigned int bitrate=1000000):
-        cdef fc2Error r
-        cdef fc2H264Option H264Option
-        H264Option.frameRate = framerate
-        H264Option.bitrate = bitrate
-        H264Option.width = width
-        H264Option.height = height
-        with nogil:
-            r = fc2H264Open(self.avi, fileName, &H264Option)   
-        raise_error(r)
-    
-    def openMJPG(self, char *fileName, unsigned int framerate, unsigned int quality=75):
-        cdef fc2Error r
-        cdef fc2MJPGOption MJPGOption
-        MJPGOption.frameRate = framerate
-        MJPGOption.quality = quality
-        with nogil:
-            r = fc2MJPGOpen(self.avi, fileName, &MJPGOption)   
-        raise_error(r)
-    
-    def close(self):
-        cdef fc2Error r
-        with nogil:
-            r = fc2AVIClose(self.avi)
-        raise_error(r)
-
-    def append(self, Image img):
-        cdef fc2Error r
-        with nogil:
-            r = fc2AVIAppend(self.avi, &img.img)
-        raise_error(r)
 
 
 cdef class Context:
@@ -553,7 +498,7 @@ cdef class Image:
             shape[2] = 2
         else:
             dtype = np.dtype("uint8")
-            stride[1] = self.img.stride/self.img.cols
+            stride[1] = int(self.img.stride/self.img.cols)
         Py_INCREF(dtype)
         shape[0] = self.img.rows
         shape[1] = self.img.cols
@@ -567,62 +512,7 @@ cdef class Image:
         Py_INCREF(self)
         return r
 
-    # # OLD VERSION - WORKS BUT HAS FLAWS
-    # def __array__(self):
-    #     cdef np.ndarray r
-    #     cdef np.npy_intp* shape = NULL
-    #     cdef np.npy_intp* stride = NULL
-    #     cdef np.dtype dtype
-    #     # cdef np.dtype dtype = 
-    #     nd = 2
-    #     fmt = self.img.format
-    #     if fmt == PIXEL_FORMAT_MONO8:
-    #         dtype = np.dtype("uint8")
-    #         shape = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
-    #         stride = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
-    #         stride[1] = 1
-    #     elif fmt == PIXEL_FORMAT_MONO16:
-    #         dtype = np.dtype("uint16")
-    #         shape = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
-    #         stride = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
-    #         stride[1] = 2 # since 16=2*8bits?
-    #     elif fmt == PIXEL_FORMAT_RGB:
-    #         dtype = np.dtype("uint8")
-    #         shape = <np.npy_intp*>malloc(3*sizeof(np.npy_intp))
-    #         stride = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
-    #         nd = 3 # COLOR
-    #         shape[2] = 3 # N color channels
-    #         stride = NULL
-    #     elif fmt == PIXEL_FORMAT_422YUV8:
-    #         dtype = np.dtype("uint8")
-    #         shape = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
-    #         stride = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
-    #         stride[1] = 1            
-    #     else:
-    #         dtype = np.dtype("uint8")
-    #         shape = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
-    #         stride = <np.npy_intp*>malloc(2*sizeof(np.npy_intp))
-    #         stride[1] = self.img.stride/self.img.cols
-    #     Py_INCREF(dtype)
-    #     shape[0] = self.img.rows
-    #     shape[1] = self.img.cols
-    #     if stride != NULL:
-    #         stride[0] = self.img.stride
-    #     #assert stride[0] == stride[1]*shape[1]
-    #     #assert shape[0]*shape[1]*stride[1] == self.img.dataSize        
-    #     r = PyArray_NewFromDescr(np.ndarray, dtype,
-    #             nd, shape, stride,
-    #             self.img.pData, np.NPY_DEFAULT, None)
-    #     r.base = <PyObject *>self
-    #     Py_INCREF(self)
-    #     if shape != NULL:
-    #         free(shape)
-    #     if stride != NULL:
-    #         free(stride)
-    #     return r
 
-    # fc2Error fc2DetermineBitsPerPixel(fc2PixelFormat format, unsigned int *pBitsPerPixel) nogil   
-    # bitsPerPixel for the provided PixcelFormat
     def get_bits_per_pixel(self):
         cdef fc2Error r
         cdef fc2PixelFormat pixel_format
